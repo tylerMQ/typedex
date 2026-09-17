@@ -41,6 +41,7 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [opponentTypes, setOpponentTypes] = useState<string[]>([]);
   const [opponentPokemon, setOpponentPokemon] = useState<PokemonSummary | null>(null);
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
   const [species, setSpecies] = useState<SpeciesOption[]>([]);
   const [speciesRuleset, setSpeciesRuleset] = useState<RulesetId | null>(null);
@@ -137,12 +138,20 @@ export default function Home() {
   function toggleOpponentType(type: string) {
     setOpponentPokemon(null);
     setOpponentTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : current.length < 2 ? [...current, type] : current);
+    setTypePickerOpen(false);
+  }
+
+  function clearOpponent() {
+    setOpponentPokemon(null);
+    setOpponentTypes([]);
+    setTypePickerOpen(false);
   }
 
   function changeMode(nextMode: Mode) {
     setMode(nextMode);
     setOpponentPokemon(null);
     setOpponentTypes([]);
+    setTypePickerOpen(false);
     if (nextMode === "advanced") setOpponentInput("pokemon");
   }
 
@@ -151,6 +160,7 @@ export default function Home() {
     setOpponentInput(nextInput);
     setOpponentPokemon(null);
     setOpponentTypes([]);
+    setTypePickerOpen(false);
   }
 
   async function openPicker(target: PickerTarget) {
@@ -171,6 +181,11 @@ export default function Home() {
     const list = event.currentTarget;
     if (list.scrollHeight - list.scrollTop - list.clientHeight > 48) return;
     setSpeciesLimit((current) => Math.min(current + SPECIES_PAGE_SIZE, filteredSpecies.length));
+  }
+
+  function renderTypeSelector() {
+    if (opponentTypes.length > 0 && !typePickerOpen) return <div className="selected-type-summary"><div>{opponentTypes.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</div><button className="quiet-button" onClick={() => setTypePickerOpen(true)}><Grid2X2 size={14} /> Edit</button></div>;
+    return <><div className="type-picker-heading"><p className="short-help">Choose one, or two for a dual type.</p>{opponentTypes.length > 0 && <button className="quiet-button" onClick={clearOpponent}>Clear</button>}</div>{graphLoading ? <div className="type-grid">{Array.from({ length: 18 }, (_, i) => <Skeleton className="type-skeleton" key={i} />)}</div> : graphError || !graph ? <div className="data-error"><Database size={24} /><strong>Couldn’t load type data</strong><button onClick={() => setGraphReload((value) => value + 1)}>Retry</button></div> : <div className="type-grid">{graph.activeTypes.map((type) => { const selected = opponentTypes.includes(type); const locked = opponentTypes.length === 2 && !selected; return <button key={type} className={`${selected ? "is-selected" : ""} ${locked ? "is-locked" : ""} type-button`} style={{ "--type-color": typeColor(type) } as CSSProperties} aria-pressed={selected} disabled={locked} onClick={() => toggleOpponentType(type)}>{graph.iconByType[type] ? <img src={graph.iconByType[type] ?? undefined} alt="" /> : <span className="type-icon-fallback" aria-hidden="true" />}{formatType(type)}{selected && <Check size={15} />}</button>; })}</div>}</>;
   }
 
   async function choosePokemon(option: SpeciesOption) {
@@ -232,17 +247,16 @@ export default function Home() {
       <div className="setup-row"><div><ScreenLabel>RULES</ScreenLabel><h2>Game era</h2></div>{partyBusy && <RefreshCw size={16} className="spin" aria-label="Updating Pokémon" />}</div>
       <RadioGroup value={advancedRuleset} onValueChange={(value) => void changeRuleset(value as RulesetId)} className="era-selector" aria-label="Game era">{RULESETS.map((item) => <label className={advancedRuleset === item.id ? "era-option is-active" : "era-option"} key={item.id}><RadioGroupItem value={item.id} /><span>{item.label}</span></label>)}</RadioGroup>
       <div className="setup-divider" />
-      <div className="setup-row"><div><ScreenLabel>OPPONENT</ScreenLabel><h2>How do you want to choose?</h2></div></div>
-      <div className="opponent-mode" role="group" aria-label="Opponent input method">
-        <button className={opponentInput === "pokemon" ? "is-active" : ""} aria-pressed={opponentInput === "pokemon"} onClick={() => changeOpponentInput("pokemon")}><Search size={17} /> Pokémon</button>
-        <button className={opponentInput === "types" ? "is-active" : ""} aria-pressed={opponentInput === "types"} onClick={() => changeOpponentInput("types")}><Grid2X2 size={17} /> Types</button>
+      <div className="setup-row opponent-choice"><div><ScreenLabel>OPPONENT</ScreenLabel><h2>Choose opponent</h2></div>
+      <div className="opponent-mode-inline" role="group" aria-label="Opponent input method">
+        <span className={opponentInput === "pokemon" ? "is-active" : ""}>Pokémon</span><Switch checked={opponentInput === "types"} onCheckedChange={(checked) => changeOpponentInput(checked ? "types" : "pokemon")} aria-label="Use types instead of an exact Pokémon" /><span className={opponentInput === "types" ? "is-active" : ""}>Types</span>
+      </div>
       </div>
       {opponentInput === "pokemon" && <div className="opponent-search">
-        {opponentPokemon ? <div className="opponent-card"><img src={opponentPokemon.spriteUrl ?? ""} alt="" /><strong>{opponentPokemon.displayName}</strong><span>{opponentPokemon.types.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</span><button onClick={() => { setOpponentPokemon(null); setOpponentTypes([]); }} aria-label="Clear opponent"><X size={16} /></button></div> : <button className="search-opponent-button" onClick={() => void openPicker({ kind: "opponent" })}><Search size={20} /><span><strong>Search Pokémon</strong><small>Automatically uses its type or dual type</small></span></button>}
+        {opponentPokemon ? <div className="opponent-card"><img src={opponentPokemon.spriteUrl ?? ""} alt="" /><strong>{opponentPokemon.displayName}</strong><span>{opponentPokemon.types.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</span><button onClick={clearOpponent} aria-label="Clear opponent"><X size={16} /></button></div> : <button className="search-opponent-button" onClick={() => void openPicker({ kind: "opponent" })}><Search size={20} /><span><strong>Search Pokémon</strong><small>Automatically uses its type or dual type</small></span></button>}
       </div>}
       {opponentInput === "types" && <div className="opponent-types">
-        <div className="type-picker-heading"><p className="short-help">Choose one, or two for a dual type.</p>{opponentTypes.length > 0 && <button className="quiet-button" onClick={() => { setOpponentTypes([]); setOpponentPokemon(null); }}>Clear</button>}</div>
-        {graphLoading ? <div className="type-grid">{Array.from({ length: 18 }, (_, i) => <Skeleton className="type-skeleton" key={i} />)}</div> : graphError || !graph ? <div className="data-error"><Database size={24} /><strong>Couldn’t load type data</strong><button onClick={() => setGraphReload((value) => value + 1)}>Retry</button></div> : <div className="type-grid">{graph.activeTypes.map((type) => { const selected = opponentTypes.includes(type); const locked = opponentTypes.length === 2 && !selected; return <button key={type} className={`${selected ? "is-selected" : ""} ${locked ? "is-locked" : ""} type-button`} style={{ "--type-color": typeColor(type) } as CSSProperties} aria-pressed={selected} disabled={locked} onClick={() => toggleOpponentType(type)}>{graph.iconByType[type] ? <img src={graph.iconByType[type] ?? undefined} alt="" /> : <span className="type-icon-fallback" aria-hidden="true" />}{formatType(type)}{selected && <Check size={15} />}</button>; })}</div>}
+        {renderTypeSelector()}
       </div>}
       <div className="setup-divider" />
       <div className="setup-row"><div><ScreenLabel>OPTIONAL</ScreenLabel><h2>Use my party</h2></div><Switch checked={partyEnabled} onCheckedChange={setPartyEnabled} aria-label="Use my party" /></div>
@@ -250,12 +264,11 @@ export default function Home() {
     </section>}
 
     {mode === "basic" && <section className="matchup-panel pixel-panel" aria-labelledby="target-heading">
-      <div className="panel-heading"><div><ScreenLabel>QUICK MATCH</ScreenLabel><h2 id="target-heading">Pick the opposing type</h2></div>{opponentTypes.length > 0 && <button className="quiet-button" onClick={() => { setOpponentTypes([]); setOpponentPokemon(null); }}>Clear</button>}</div>
-      <p className="short-help">Choose one, or two for a dual type.</p>
-      {graphLoading ? <div className="type-grid">{Array.from({ length: 18 }, (_, i) => <Skeleton className="type-skeleton" key={i} />)}</div> : graphError || !graph ? <div className="data-error"><Database size={24} /><strong>Couldn’t load type data</strong><button onClick={() => setGraphReload((value) => value + 1)}>Retry</button></div> : <div className="type-grid">{graph.activeTypes.map((type) => { const selected = opponentTypes.includes(type); const locked = opponentTypes.length === 2 && !selected; return <button key={type} className={`${selected ? "is-selected" : ""} ${locked ? "is-locked" : ""} type-button`} style={{ "--type-color": typeColor(type) } as CSSProperties} aria-pressed={selected} disabled={locked} onClick={() => toggleOpponentType(type)}>{graph.iconByType[type] ? <img src={graph.iconByType[type] ?? undefined} alt="" /> : <span className="type-icon-fallback" aria-hidden="true" />}{formatType(type)}{selected && <Check size={15} />}</button>; })}</div>}
+      <div className="panel-heading"><div><ScreenLabel>QUICK MATCH</ScreenLabel><h2 id="target-heading">Pick the opposing type</h2></div>{opponentTypes.length > 0 && <button className="quiet-button" onClick={clearOpponent}>Clear</button>}</div>
+      {renderTypeSelector()}
     </section>}
 
-    {opponentTypes.length > 0 && <section className="result-panel pixel-panel" aria-live="polite">
+    {opponentTypes.length > 0 && !typePickerOpen && <section className="result-panel pixel-panel" aria-live="polite">
       <div className="target-line"><ScreenLabel>AGAINST</ScreenLabel><div>{opponentTypes.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</div></div>
       {mode === "advanced" && recommendations.length > 0 && <section className="best-party"><ScreenLabel>BEST FROM PARTY</ScreenLabel><div>{recommendations[0].pokemon.spriteUrl && <img src={recommendations[0].pokemon.spriteUrl} alt="" />}<span><strong>{recommendations[0].pokemon.displayName}</strong><small>{recommendations[0].explanation}</small></span><b>{formatMultiplier(recommendations[0].offensiveMultiplier)}</b></div></section>}
       <div className="answer-grid"><section className="answer-card answer-good"><ScreenLabel>USE</ScreenLabel><h3>Most effective</h3>{usefulGroups.length ? usefulGroups.map((group) => <div className="answer-row" key={group.multiplier}><strong>{formatMultiplier(group.multiplier)}</strong><span>{group.types.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</span></div>) : <p>No super-effective types.</p>}</section><section className="answer-card answer-bad"><ScreenLabel>AVOID</ScreenLabel><h3>Least effective</h3>{weakGroups.length ? weakGroups.slice().reverse().map((group) => <div className="answer-row" key={group.multiplier}><strong>{formatMultiplier(group.multiplier)}</strong><span>{group.types.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</span></div>) : <p>No resisted types.</p>}</section></div>
