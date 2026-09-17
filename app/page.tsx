@@ -137,8 +137,11 @@ export default function Home() {
 
   function toggleOpponentType(type: string) {
     setOpponentPokemon(null);
-    setOpponentTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : current.length < 2 ? [...current, type] : current);
-    setTypePickerOpen(false);
+    const nextTypes = opponentTypes.includes(type)
+      ? opponentTypes.filter((item) => item !== type)
+      : opponentTypes.length < 2 ? [...opponentTypes, type] : opponentTypes;
+    setOpponentTypes(nextTypes);
+    setTypePickerOpen(nextTypes.length < 2);
   }
 
   function clearOpponent() {
@@ -184,8 +187,8 @@ export default function Home() {
   }
 
   function renderTypeSelector() {
-    if (opponentTypes.length > 0 && !typePickerOpen) return <div className="selected-type-summary"><div>{opponentTypes.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</div><button className="quiet-button" onClick={() => setTypePickerOpen(true)}><Grid2X2 size={14} /> Edit</button></div>;
-    return <><div className="type-picker-heading"><p className="short-help">Choose one, or two for a dual type.</p>{opponentTypes.length > 0 && <button className="quiet-button" onClick={clearOpponent}>Clear</button>}</div>{graphLoading ? <div className="type-grid">{Array.from({ length: 18 }, (_, i) => <Skeleton className="type-skeleton" key={i} />)}</div> : graphError || !graph ? <div className="data-error"><Database size={24} /><strong>Couldn’t load type data</strong><button onClick={() => setGraphReload((value) => value + 1)}>Retry</button></div> : <div className="type-grid">{graph.activeTypes.map((type) => { const selected = opponentTypes.includes(type); const locked = opponentTypes.length === 2 && !selected; return <button key={type} className={`${selected ? "is-selected" : ""} ${locked ? "is-locked" : ""} type-button`} style={{ "--type-color": typeColor(type) } as CSSProperties} aria-pressed={selected} disabled={locked} onClick={() => toggleOpponentType(type)}>{graph.iconByType[type] ? <img src={graph.iconByType[type] ?? undefined} alt="" /> : <span className="type-icon-fallback" aria-hidden="true" />}{formatType(type)}{selected && <Check size={15} />}</button>; })}</div>}</>;
+    if (opponentTypes.length > 0 && !typePickerOpen) return <div className="selected-type-summary"><div>{opponentTypes.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</div><div className="selected-type-actions"><button className="summary-clear" onClick={clearOpponent} aria-label="Clear selected types"><X size={14} /></button><button className="quiet-button" onClick={() => setTypePickerOpen(true)}><Grid2X2 size={14} /> Edit</button></div></div>;
+    return <><div className="type-picker-heading"><p className="short-help">{opponentTypes.length ? `${opponentTypes.length} selected` : "Choose one, or two for a dual type."}</p>{opponentTypes.length > 0 && <div className="type-picker-actions"><button className="quiet-button" onClick={clearOpponent}>Clear</button><button className="show-matchup-button" onClick={() => setTypePickerOpen(false)}>Show matchup</button></div>}</div>{graphLoading ? <div className="type-grid">{Array.from({ length: 18 }, (_, i) => <Skeleton className="type-skeleton" key={i} />)}</div> : graphError || !graph ? <div className="data-error"><Database size={24} /><strong>Couldn’t load type data</strong><button onClick={() => setGraphReload((value) => value + 1)}>Retry</button></div> : <div className="type-grid">{graph.activeTypes.map((type) => { const selected = opponentTypes.includes(type); const locked = opponentTypes.length === 2 && !selected; return <button key={type} className={`${selected ? "is-selected" : ""} ${locked ? "is-locked" : ""} type-button`} style={{ "--type-color": typeColor(type) } as CSSProperties} aria-pressed={selected} disabled={locked} onClick={() => toggleOpponentType(type)}>{graph.iconByType[type] ? <img src={graph.iconByType[type] ?? undefined} alt="" /> : <span className="type-icon-fallback" aria-hidden="true" />}{formatType(type)}{selected && <Check size={15} />}</button>; })}</div>}</>;
   }
 
   async function choosePokemon(option: SpeciesOption) {
@@ -264,7 +267,7 @@ export default function Home() {
     </section>}
 
     {mode === "basic" && <section className="matchup-panel pixel-panel" aria-labelledby="target-heading">
-      <div className="panel-heading"><div><ScreenLabel>QUICK MATCH</ScreenLabel><h2 id="target-heading">Pick the opposing type</h2></div>{opponentTypes.length > 0 && <button className="quiet-button" onClick={clearOpponent}>Clear</button>}</div>
+      <div className="panel-heading"><div><ScreenLabel>QUICK MATCH</ScreenLabel><h2 id="target-heading">Pick the opposing type</h2></div></div>
       {renderTypeSelector()}
     </section>}
 
