@@ -80,8 +80,10 @@ export default function Home() {
     const goOffline = () => setOnline(false);
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
-    setHydrated(true);
-    return () => { window.removeEventListener("online", goOnline); window.removeEventListener("offline", goOffline); };
+    // Let restored state render before enabling the persistence effect. Otherwise a
+    // freshly mounted page can overwrite saved choices with the default state.
+    const hydrationTimer = window.setTimeout(() => setHydrated(true), 0);
+    return () => { window.clearTimeout(hydrationTimer); window.removeEventListener("online", goOnline); window.removeEventListener("offline", goOffline); };
   }, []);
 
   useEffect(() => {
