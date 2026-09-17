@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type UIEvent } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type UIEvent } from "react";
 import { Check, Database, Grid2X2, Plus, RefreshCw, Search, WifiOff, X } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -50,7 +50,6 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [speciesLimit, setSpeciesLimit] = useState(SPECIES_PAGE_SIZE);
   const [online, setOnline] = useState(true);
-  const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -256,11 +255,11 @@ export default function Home() {
       {graphLoading ? <div className="type-grid">{Array.from({ length: 18 }, (_, i) => <Skeleton className="type-skeleton" key={i} />)}</div> : graphError || !graph ? <div className="data-error"><Database size={24} /><strong>Couldn’t load type data</strong><button onClick={() => setGraphReload((value) => value + 1)}>Retry</button></div> : <div className="type-grid">{graph.activeTypes.map((type) => { const selected = opponentTypes.includes(type); const locked = opponentTypes.length === 2 && !selected; return <button key={type} className={`${selected ? "is-selected" : ""} ${locked ? "is-locked" : ""} type-button`} style={{ "--type-color": typeColor(type) } as CSSProperties} aria-pressed={selected} disabled={locked} onClick={() => toggleOpponentType(type)}>{graph.iconByType[type] ? <img src={graph.iconByType[type] ?? undefined} alt="" /> : <span className="type-icon-fallback" aria-hidden="true" />}{formatType(type)}{selected && <Check size={15} />}</button>; })}</div>}
     </section>}
 
-    <section className="result-panel pixel-panel" ref={resultRef} aria-live="polite">{opponentTypes.length === 0 ? <div className="empty-result"><span>?</span><strong>Pick a type</strong><p>Your best and worst attack types will appear here.</p></div> : <>
+    {opponentTypes.length > 0 && <section className="result-panel pixel-panel" aria-live="polite">
       <div className="target-line"><ScreenLabel>AGAINST</ScreenLabel><div>{opponentTypes.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</div></div>
       {mode === "advanced" && recommendations.length > 0 && <section className="best-party"><ScreenLabel>BEST FROM PARTY</ScreenLabel><div>{recommendations[0].pokemon.spriteUrl && <img src={recommendations[0].pokemon.spriteUrl} alt="" />}<span><strong>{recommendations[0].pokemon.displayName}</strong><small>{recommendations[0].explanation}</small></span><b>{formatMultiplier(recommendations[0].offensiveMultiplier)}</b></div></section>}
       <div className="answer-grid"><section className="answer-card answer-good"><ScreenLabel>USE</ScreenLabel><h3>Most effective</h3>{usefulGroups.length ? usefulGroups.map((group) => <div className="answer-row" key={group.multiplier}><strong>{formatMultiplier(group.multiplier)}</strong><span>{group.types.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</span></div>) : <p>No super-effective types.</p>}</section><section className="answer-card answer-bad"><ScreenLabel>AVOID</ScreenLabel><h3>Least effective</h3>{weakGroups.length ? weakGroups.slice().reverse().map((group) => <div className="answer-row" key={group.multiplier}><strong>{formatMultiplier(group.multiplier)}</strong><span>{group.types.map((type) => <TypeChip type={type} iconUrl={graph?.iconByType[type]} key={type} />)}</span></div>) : <p>No resisted types.</p>}</section></div>
-    </>}</section>
+    </section>}
     <footer><span>{mode === "basic" ? "Modern rules" : RULESETS.find((item) => item.id === advancedRuleset)?.label}</span><a href="https://pokeapi.co" target="_blank" rel="noreferrer">PokéAPI</a></footer>
   </div>
 
